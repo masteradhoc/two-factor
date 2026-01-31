@@ -1,10 +1,11 @@
 === Two Factor ===
-Contributors: georgestephanis, valendesigns, stevenkword, extendwings, sgrant, aaroncampbell, johnbillion, stevegrunwell, netweb, kasparsd, alihusnainarshad, passoniate
-Tags:         2fa, mfa, totp, authentication, security
-Tested up to: 6.9
-Stable tag:   0.14.2
-License:      GPL-2.0-or-later
-License URI:  https://spdx.org/licenses/GPL-2.0-or-later.html
+Contributors: 			georgestephanis, valendesigns, stevenkword, extendwings, sgrant, aaroncampbell, johnbillion, stevegrunwell, netweb, kasparsd, alihusnainarshad, passoniate, masteradhoc
+Tags:         			2fa, mfa, totp, authentication, security
+Requires at least: 	7.2
+Tested up to: 			6.9
+Stable tag:   			0.14.2
+License:      			GPL-2.0-or-later
+License URI:  			https://spdx.org/licenses/GPL-2.0-or-later.html
 
 Enable Two-Factor Authentication (2FA) using time-based one-time passwords (TOTP), Universal 2nd Factor (U2F), email, and backup verification codes.
 
