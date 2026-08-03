@@ -216,6 +216,20 @@ class Two_Factor_CLI_Command extends WP_CLI_Command {
 	private function disable_single_provider( $user, $provider, $assoc_args ) {
 		$enabled = Two_Factor_Core::get_enabled_providers_for_user( $user );
 
+		// Reject unknown provider keys up front. Without this a typo or the wrong
+		// casing (Two_Factor_TOTP) would fall through to the "not enabled" branch
+		// below and exit zero, while the real provider stayed enabled.
+		if ( ! array_key_exists( $provider, Two_Factor_Core::get_supported_providers_for_user( $user ) ) ) {
+			WP_CLI::error(
+				sprintf(
+					/* translators: 1: provider class name, 2: user login */
+					__( 'Unknown provider "%1$s". Run "wp two-factor list-providers" to see the registered providers, or "wp two-factor disable %2$s" to clear all two-factor state.', 'two-factor' ),
+					$provider,
+					$user->user_login
+				)
+			);
+		}
+
 		if ( ! in_array( $provider, $enabled, true ) ) {
 			WP_CLI::success(
 				sprintf(
@@ -269,6 +283,65 @@ class Two_Factor_CLI_Command extends WP_CLI_Command {
 	}
 
 	/**
+	 * User meta keys holding two-factor state that a full reset clears.
+	 *
+	 * Two_Factor_Core::USER_PASSWORD_WAS_RESET_KEY is deliberately absent: it
+	 * records a password compromise rather than 2FA configuration and is
+	 * preserved across a reset.
+	 *
+	 * @since 0.17.0
+	 *
+	 * @return string[] Meta key names.
+	 */
+	private function two_factor_state_meta_keys() {
+		$keys = array(
+			Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY,
+			Two_Factor_Core::PROVIDER_USER_META_KEY,
+			Two_Factor_Core::USER_META_NONCE_KEY,
+			Two_Factor_Core::USER_RATE_LIMIT_KEY,
+			Two_Factor_Core::USER_FAILED_LOGIN_ATTEMPTS_KEY,
+		);
+
+		if ( class_exists( 'Two_Factor_Totp' ) ) {
+			$keys[] = Two_Factor_Totp::SECRET_META_KEY;
+			$keys[] = Two_Factor_Totp::LAST_SUCCESSFUL_LOGIN_META_KEY;
+		}
+
+		if ( class_exists( 'Two_Factor_Backup_Codes' ) ) {
+			$keys[] = Two_Factor_Backup_Codes::BACKUP_CODES_META_KEY;
+		}
+
+		if ( class_exists( 'Two_Factor_Email' ) ) {
+			$keys[] = Two_Factor_Email::TOKEN_META_KEY;
+			$keys[] = Two_Factor_Email::TOKEN_META_KEY_TIMESTAMP;
+		}
+
+		return $keys;
+	}
+
+	/**
+	 * Whether a user carries any two-factor state a full reset would clear.
+	 *
+	 * Active sessions are intentionally not treated as two-factor state, so a
+	 * reset against an account that never used 2FA stays a true no-op instead of
+	 * logging the user out.
+	 *
+	 * @since 0.17.0
+	 *
+	 * @param WP_User $user Target user.
+	 * @return bool True when there is something to clean up.
+	 */
+	private function has_residual_two_factor_state( $user ) {
+		foreach ( $this->two_factor_state_meta_keys() as $meta_key ) {
+			if ( ! empty( get_user_meta( $user->ID, $meta_key, true ) ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Disable all 2FA providers and clean up all residual state for a user.
 	 *
 	 * @param WP_User $user       Target user.
@@ -278,9 +351,12 @@ class Two_Factor_CLI_Command extends WP_CLI_Command {
 	 */
 	private function disable_all_providers( $user, $assoc_args ) {
 		$enabled = Two_Factor_Core::get_enabled_providers_for_user( $user );
-		$raw     = get_user_meta( $user->ID, Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY, true );
 
-		if ( empty( $enabled ) && empty( $raw ) ) {
+		// Gate on all residual state, not just the enabled-providers list. An
+		// account can carry a TOTP secret, recovery-code hashes, a login nonce or
+		// an active throttle while that list is empty; returning early here would
+		// report "already disabled" and leave every one of them in place.
+		if ( ! $this->has_residual_two_factor_state( $user ) ) {
 			WP_CLI::success(
 				sprintf(
 					/* translators: %s: user login */
@@ -564,6 +640,19 @@ class Two_Factor_CLI_Command extends WP_CLI_Command {
 			WP_CLI::error( __( 'The Two_Factor_Backup_Codes provider is not available.', 'two-factor' ) );
 		}
 
+		// Confirm the provider can actually be enabled before writing anything.
+		// generate_codes() replaces the stored hashes, so failing afterwards would
+		// destroy the old codes and leave unusable new ones the operator never saw.
+		if ( ! array_key_exists( 'Two_Factor_Backup_Codes', Two_Factor_Core::get_supported_providers_for_user( $user ) ) ) {
+			WP_CLI::error(
+				sprintf(
+					/* translators: %s: user login */
+					__( 'The Two_Factor_Backup_Codes provider is not registered for user %s, so generated codes could not be used. No codes were changed.', 'two-factor' ),
+					$user->user_login
+				)
+			);
+		}
+
 		$raw_count = WP_CLI\Utils\get_flag_value( $assoc_args, 'count', (string) Two_Factor_Backup_Codes::NUMBER_OF_CODES );
 		if ( ! is_scalar( $raw_count ) ) {
 			WP_CLI::error(
@@ -627,10 +716,15 @@ class Two_Factor_CLI_Command extends WP_CLI_Command {
 		// is never offered, so the user is rejected at the 2FA step.
 		$providers_before = Two_Factor_Core::get_enabled_providers_for_user( $user );
 		if ( ! Two_Factor_Core::enable_provider_for_user( $user->ID, 'Two_Factor_Backup_Codes' ) ) {
+			// Unreachable via the pre-flight check above, but if enablement still
+			// fails the freshly written hashes are unusable — drop them rather than
+			// leaving unusable recovery material behind.
+			delete_user_meta( $user->ID, Two_Factor_Backup_Codes::BACKUP_CODES_META_KEY );
+
 			WP_CLI::error(
 				sprintf(
 					/* translators: %s: user login */
-					__( 'Backup codes were generated but the provider could not be enabled for user %s.', 'two-factor' ),
+					__( 'Backup codes could not be enabled for user %s. No codes were stored.', 'two-factor' ),
 					$user->user_login
 				)
 			);
