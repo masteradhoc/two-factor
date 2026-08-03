@@ -167,9 +167,9 @@ that capture output for assertions and throw on `error()`/`confirm()`:
 - `status` — output for users with and without 2FA, backup-code count, `--format` passthrough
 - `list-providers` — registered providers listed, `--format` passthrough
 - `enable` — enabling secret-free providers; session destruction on change; refusing TOTP (no stale "Phase 3" pointer) and backup codes; unknown provider and missing-argument errors
-- `disable` (single provider) — removal leaves others intact, session destruction on change, idempotent no-op, confirmation required without `--yes`
-- `disable` (all) — full reset clears providers/throttle/nonce state and destroys sessions, preserves the compromised-password-reset flag, idempotent no-op, stale-meta cleanup guarding the fail-closed email fallback, confirmation required without `--yes`
-- `backup-codes generate` — default and `--count` code counts, regeneration replaces the set, enables the provider so codes are usable at login, session destruction when first enabled, unknown-action and missing-argument errors
+- `disable` (single provider) — removal leaves others intact (TOTP also drops its stored secret), session destruction on change, idempotent no-op, unregistered/mis-cased provider keys fail instead of reporting a false success, confirmation required without `--yes`
+- `disable` (all) — full reset clears providers/throttle/nonce state and destroys sessions, also cleans residual secrets and lockout state when the enabled-providers list is already empty, preserves the compromised-password-reset flag, idempotent no-op, stale-meta cleanup guarding the fail-closed email fallback, confirmation required without `--yes`
+- `backup-codes generate` — default and `--count` code counts, regeneration replaces the set, enables the provider so codes are usable at login, stores no hashes when the provider cannot be enabled, session destruction when first enabled, unknown-action and missing-argument errors
 - `unlock` — clears the login throttle for a rate-limited user; no-op message otherwise
 
 ## Test Helpers

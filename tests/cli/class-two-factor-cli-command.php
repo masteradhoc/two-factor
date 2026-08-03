@@ -433,7 +433,8 @@ class Tests_Two_Factor_CLI_Command extends WP_UnitTestCase {
 		$this->enable_provider( 'Two_Factor_Totp' );
 		$totp = Two_Factor_Totp::get_instance();
 
-		$this->assertTrue( $totp->set_user_totp_key( $this->user->ID, Two_Factor_Totp::generate_key() ) );
+		// update_user_meta() returns the new meta ID (int) on insert, true on update.
+		$this->assertNotFalse( $totp->set_user_totp_key( $this->user->ID, Two_Factor_Totp::generate_key() ) );
 		$this->assertNotSame( '', $totp->get_user_totp_key( $this->user->ID ) );
 
 		$this->command->disable( array( 'cli_test_user', 'Two_Factor_Totp' ), array( 'yes' => true ) );
@@ -465,6 +466,31 @@ class Tests_Two_Factor_CLI_Command extends WP_UnitTestCase {
 		$this->command->disable( array( 'cli_test_user', 'Two_Factor_Totp' ), array( 'yes' => true ) );
 
 		$this->assertStringContainsString( 'no changes made', $this->last_message( 'success' ) );
+	}
+
+	/**
+	 * Disabling an unregistered provider key fails loudly instead of reporting success.
+	 *
+	 * A mis-typed or mis-cased class name must not exit zero with "no changes
+	 * made" while the real provider quietly stays enabled with its secret.
+	 *
+	 * @covers Two_Factor_CLI_Command::disable
+	 */
+	public function test_disable_single_provider_unknown_key_errors() {
+		$this->enable_provider( 'Two_Factor_Totp' );
+
+		$message = $this->assert_command_aborts(
+			function () {
+				$this->command->disable( array( 'cli_test_user', 'Two_Factor_TOTP' ), array( 'yes' => true ) );
+			}
+		);
+
+		$this->assertStringContainsString( 'Two_Factor_TOTP', $message );
+		$this->assertContains(
+			'Two_Factor_Totp',
+			Two_Factor_Core::get_enabled_providers_for_user( $this->user ),
+			'The correctly-cased provider must stay enabled after a failed disable.'
+		);
 	}
 
 	/**
@@ -553,6 +579,40 @@ class Tests_Two_Factor_CLI_Command extends WP_UnitTestCase {
 		$this->command->disable( array( 'cli_test_user' ), array( 'yes' => true ) );
 
 		$this->assertStringContainsString( 'already disabled', $this->last_message( 'success' ) );
+	}
+
+	/**
+	 * A full reset clears residual state even when no providers are enabled.
+	 *
+	 * An account can still carry a TOTP secret, recovery-code hashes, a login
+	 * nonce and an active throttle while the enabled-providers list is empty.
+	 * Reporting "already disabled" and returning would leave all of it behind.
+	 *
+	 * @covers Two_Factor_CLI_Command::disable
+	 */
+	public function test_disable_all_providers_clears_residual_state_without_enabled_providers() {
+		$totp = Two_Factor_Totp::get_instance();
+		$totp->set_user_totp_key( $this->user->ID, Two_Factor_Totp::generate_key() );
+		Two_Factor_Backup_Codes::get_instance()->generate_codes( $this->user, array( 'method' => 'replace' ) );
+		update_user_meta( $this->user->ID, Two_Factor_Core::USER_META_NONCE_KEY, array( 'key' => 'nonce-value' ) );
+		update_user_meta( $this->user->ID, Two_Factor_Core::USER_RATE_LIMIT_KEY, time() );
+		update_user_meta( $this->user->ID, Two_Factor_Core::USER_FAILED_LOGIN_ATTEMPTS_KEY, 7 );
+		$this->create_user_session();
+
+		$this->assertEmpty(
+			Two_Factor_Core::get_enabled_providers_for_user( $this->user ),
+			'This scenario requires an empty enabled-providers list.'
+		);
+
+		$this->command->disable( array( 'cli_test_user' ), array( 'yes' => true ) );
+
+		$this->assertSame( '', $totp->get_user_totp_key( $this->user->ID ) );
+		$this->assertSame( 0, Two_Factor_Backup_Codes::codes_remaining_for_user( $this->user ) );
+		$this->assertEmpty( get_user_meta( $this->user->ID, Two_Factor_Core::USER_META_NONCE_KEY, true ) );
+		$this->assertEmpty( get_user_meta( $this->user->ID, Two_Factor_Core::USER_RATE_LIMIT_KEY, true ) );
+		$this->assertEmpty( get_user_meta( $this->user->ID, Two_Factor_Core::USER_FAILED_LOGIN_ATTEMPTS_KEY, true ) );
+		$this->assertSame( 0, $this->count_user_sessions() );
+		$this->assertStringContainsString( 'All 2FA disabled', $this->last_message( 'success' ) );
 	}
 
 	/**
@@ -777,7 +837,42 @@ class Tests_Two_Factor_CLI_Command extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An unknown backup-codes action aborts with an error.
+	 * No backup-code hashes are stored when the provider cannot be enabled.
+	 *
+	 * Generating first and enabling second leaves unusable hashes behind when
+	 * enablement fails, with no plaintext codes shown to the operator.
+	 *
+	 * @covers Two_Factor_CLI_Command::backup_codes
+	 */
+	public function test_backup_codes_generate_does_not_store_hashes_when_provider_unavailable() {
+		$deregister = function ( $providers ) {
+			unset( $providers['Two_Factor_Backup_Codes'] );
+
+			return $providers;
+		};
+
+		add_filter( 'two_factor_providers', $deregister );
+
+		try {
+			$this->assert_command_aborts(
+				function () {
+					$this->command->backup_codes( array( 'generate', 'cli_test_user' ), array() );
+				}
+			);
+		} finally {
+			remove_filter( 'two_factor_providers', $deregister );
+		}
+
+		$this->assertSame(
+			0,
+			Two_Factor_Backup_Codes::codes_remaining_for_user( $this->user ),
+			'Unusable hashes must not be left behind when the provider cannot be enabled.'
+		);
+		$this->assertEmpty( Two_Factor_Core::get_enabled_providers_for_user( $this->user ) );
+	}
+
+	/**
+	 * An unknown backup-codes action is rejected.
 	 *
 	 * @covers Two_Factor_CLI_Command::backup_codes
 	 */
