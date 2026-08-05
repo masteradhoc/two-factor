@@ -80,7 +80,7 @@ class Two_Factor_Totp extends Two_Factor_Provider {
 	 *
 	 * @param int $now Timestamp to use when overriding time().
 	 */
-	public static function set_time( $now ) {
+	public static function set_time( $now ): void {
 		self::$now = $now;
 	}
 
@@ -91,7 +91,7 @@ class Two_Factor_Totp extends Two_Factor_Provider {
 	 *
 	 * @codeCoverageIgnore
 	 */
-	public function register_rest_routes() {
+	public function register_rest_routes(): void {
 		register_rest_route(
 			Two_Factor_Core::REST_NAMESPACE,
 			'/totp',
@@ -167,7 +167,7 @@ class Two_Factor_Totp extends Two_Factor_Provider {
 	 * @codeCoverageIgnore
 	 * @param string $hook_suffix Hook suffix.
 	 */
-	public function enqueue_assets( $hook_suffix ) {
+	public function enqueue_assets( $hook_suffix ): void {
 		$environment_prefix = file_exists( TWO_FACTOR_DIR . '/dist' ) ? '/dist' : '';
 
 		wp_register_script(
@@ -773,7 +773,7 @@ class Two_Factor_Totp extends Two_Factor_Provider {
 	 *
 	 * @codeCoverageIgnore
 	 */
-	public function authentication_page( $user ) {
+	public function authentication_page( $user ): void {
 		require_once ABSPATH . '/wp-admin/includes/template.php';
 		?>
 		<?php

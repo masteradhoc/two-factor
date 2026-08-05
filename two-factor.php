@@ -64,7 +64,7 @@ register_uninstall_hook( __FILE__, array( Two_Factor_Core::class, 'uninstall' ) 
  *
  * @since 0.16
  */
-function two_factor_register_admin_hooks() {
+function two_factor_register_admin_hooks(): void {
 	if ( is_admin() ) {
 		add_action( 'admin_menu', 'two_factor_add_settings_page' );
 	}
@@ -84,7 +84,7 @@ add_action( 'init', 'two_factor_register_admin_hooks' );
  *
  * @since 0.16
  */
-function two_factor_add_settings_page() {
+function two_factor_add_settings_page(): void {
 	add_options_page(
 		__( 'Two-Factor Settings', 'two-factor' ),
 		__( 'Two-Factor', 'two-factor' ),
@@ -100,7 +100,7 @@ function two_factor_add_settings_page() {
  *
  * @since 0.16
  */
-function two_factor_render_settings_page() {
+function two_factor_render_settings_page(): void {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;
 	}

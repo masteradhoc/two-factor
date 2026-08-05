@@ -108,7 +108,7 @@ class Two_Factor_Core {
 	 *
 	 * @since 0.2.0
 	 */
-	public static function add_hooks( $compat ) {
+	public static function add_hooks( $compat ): void {
 		// Allow providers to register their hooks.
 		add_action( 'init', array( __CLASS__, 'get_providers' ) ); // @phpstan-ignore return.void
 
@@ -161,7 +161,7 @@ class Two_Factor_Core {
 	 *
 	 * @codeCoverageIgnore
 	 */
-	public static function login_enqueue_scripts() {
+	public static function login_enqueue_scripts(): void {
 		$environment_prefix = file_exists( TWO_FACTOR_DIR . '/dist' ) ? '/dist' : '';
 
 		wp_register_script(
@@ -869,7 +869,7 @@ class Two_Factor_Core {
 	 * @param string  $user_login Username.
 	 * @param WP_User $user WP_User object of the logged-in user.
 	 */
-	public static function wp_login( $user_login, $user ) {
+	public static function wp_login( $user_login, $user ): void {
 		if ( ! self::is_user_using_two_factor( $user->ID ) ) {
 			return;
 		}
@@ -991,7 +991,7 @@ class Two_Factor_Core {
 	 *
 	 * @param WP_User|false $user WP_User object of the logged-in user.
 	 */
-	public static function show_two_factor_login( $user ) {
+	public static function show_two_factor_login( $user ): void {
 		if ( ! $user ) {
 			$user = wp_get_current_user();
 		}
@@ -1013,7 +1013,7 @@ class Two_Factor_Core {
 	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
 	 */
-	public static function maybe_show_last_login_failure_notice( $user ) {
+	public static function maybe_show_last_login_failure_notice( $user ): void {
 		$last_failed_two_factor_login = (int) get_user_meta( $user->ID, self::USER_RATE_LIMIT_KEY, true );
 		$failed_login_count           = (int) get_user_meta( $user->ID, self::USER_FAILED_LOGIN_ATTEMPTS_KEY, true );
 
@@ -1046,7 +1046,7 @@ class Two_Factor_Core {
 	 *
 	 * @param WP_Error $errors Error object.
 	 */
-	public static function maybe_show_reset_password_notice( $errors ) {
+	public static function maybe_show_reset_password_notice( $errors ): WP_Error {
 		if ( 'incorrect_password' !== $errors->get_error_code() ) {
 			return $errors;
 		}
@@ -1097,7 +1097,7 @@ class Two_Factor_Core {
 	 *
 	 * @param WP_User $user User object.
 	 */
-	public static function clear_password_reset_notice( $user ) {
+	public static function clear_password_reset_notice( $user ): void {
 		delete_user_meta( $user->ID, self::USER_PASSWORD_WAS_RESET_KEY );
 	}
 
@@ -1113,7 +1113,7 @@ class Two_Factor_Core {
 	 * @param string|object $provider An override to the provider.
 	 * @param string        $action Action to perform.
 	 */
-	public static function login_html( $user, $login_nonce, $redirect_to, $error_msg = '', $provider = null, $action = 'validate_2fa' ) {
+	public static function login_html( $user, $login_nonce, $redirect_to, $error_msg = '', $provider = null, $action = 'validate_2fa' ): void {
 		$provider = self::get_provider_for_user( $user, $provider );
 		if ( ! $provider ) {
 			wp_die( esc_html__( 'Two-factor provider not available for this user.', 'two-factor' ) );
@@ -1580,7 +1580,7 @@ class Two_Factor_Core {
 	 *
 	 * @since 0.2.0
 	 */
-	public static function login_form_validate_2fa() {
+	public static function login_form_validate_2fa(): void {
 		$wp_auth_id      = ! empty( $_REQUEST['wp-auth-id'] ) ? absint( $_REQUEST['wp-auth-id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified in validate_login_form_2fa() before any use.
 		$nonce           = ( isset( $_REQUEST['wp-auth-nonce'] ) && is_scalar( $_REQUEST['wp-auth-nonce'] ) ) ? sanitize_text_field( wp_unslash( (string) $_REQUEST['wp-auth-nonce'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified in validate_login_form_2fa() before any use.
 		$provider        = ! empty( $_REQUEST['provider'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['provider'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified in validate_login_form_2fa() before any use.
@@ -1742,7 +1742,7 @@ class Two_Factor_Core {
 	 *
 	 * @since 0.9.0
 	 */
-	public static function login_form_revalidate_2fa() {
+	public static function login_form_revalidate_2fa(): void {
 		$nonce           = ( isset( $_REQUEST['wp-auth-nonce'] ) && is_scalar( $_REQUEST['wp-auth-nonce'] ) ) ? sanitize_text_field( wp_unslash( (string) $_REQUEST['wp-auth-nonce'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified in revalidate_login_form_2fa() for POST before processing.
 		$provider        = ! empty( $_REQUEST['provider'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['provider'] ) ) : false; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified in revalidate_login_form_2fa() for POST before processing.
 		$redirect_to     = ! empty( $_REQUEST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_REQUEST['redirect_to'] ) ) : admin_url(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified in revalidate_login_form_2fa() for POST before processing.
@@ -1972,7 +1972,7 @@ class Two_Factor_Core {
 	 *
 	 * @since 0.8.0
 	 */
-	public static function reset_compromised_password( $user ) {
+	public static function reset_compromised_password( $user ): void {
 		// Unhook because `wp_password_change_notification()` wouldn't notify the site admin when
 		// their password is compromised.
 		remove_action( 'after_password_reset', 'wp_password_change_notification' );
@@ -1992,7 +1992,7 @@ class Two_Factor_Core {
 	 *
 	 * @param WP_User $user The user whose password should be reset.
 	 */
-	public static function send_password_reset_emails( $user ) {
+	public static function send_password_reset_emails( $user ): void {
 		self::notify_user_password_reset( $user );
 
 		/**
@@ -2082,7 +2082,7 @@ class Two_Factor_Core {
 	 *
 	 * @since 0.8.0
 	 */
-	public static function show_password_reset_error() {
+	public static function show_password_reset_error(): void {
 		$error = new WP_Error(
 			'too_many_attempts',
 			sprintf(
@@ -2143,7 +2143,7 @@ class Two_Factor_Core {
 	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
 	 */
-	public static function user_two_factor_options( $user ) {
+	public static function user_two_factor_options( $user ): void {
 		$providers = self::get_supported_providers_for_user( $user );
 
 		wp_enqueue_style( 'user-edit-2fa', plugins_url( 'user-edit.css', __FILE__ ), array(), TWO_FACTOR_VERSION );
@@ -2269,7 +2269,7 @@ class Two_Factor_Core {
 	 *
 	 * @param WP_Error[] $errors List of errors to render.
 	 */
-	private static function render_errors( array $errors ) {
+	private static function render_errors( array $errors ): void {
 		foreach ( $errors as $error ) {
 			if ( $error->has_errors() ) {
 				$error_type = $error->get_error_data()['type'] ?? null;
@@ -2293,7 +2293,7 @@ class Two_Factor_Core {
 	 * @param WP_User $user User instance.
 	 * @param array   $providers List of available providers.
 	 */
-	private static function render_user_providers_form( $user, $providers ) {
+	private static function render_user_providers_form( $user, $providers ): void {
 		$primary_provider_key      = self::get_primary_provider_key_selected_for_user( $user );
 		$available_providers       = self::get_available_providers_for_user( $user );
 		$recommended_provider_keys = self::get_recommended_providers( $user );
@@ -2473,7 +2473,7 @@ class Two_Factor_Core {
 	 *
 	 * @param int $user_id User ID.
 	 */
-	public static function user_two_factor_options_update( $user_id ) {
+	public static function user_two_factor_options_update( $user_id ): void {
 		if ( isset( $_POST['_nonce_user_two_factor_options'] ) ) {
 			check_admin_referer( 'user_two_factor_options', '_nonce_user_two_factor_options' );
 
@@ -2671,7 +2671,7 @@ class Two_Factor_Core {
 	 *
 	 * @since 0.17.0
 	 */
-	public static function add_privacy_policy_content() {
+	public static function add_privacy_policy_content(): void {
 		if ( ! function_exists( 'wp_add_privacy_policy_content' ) ) {
 			return;
 		}

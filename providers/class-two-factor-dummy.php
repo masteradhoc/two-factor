@@ -40,7 +40,7 @@ class Two_Factor_Dummy extends Two_Factor_Provider {
 	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
 	 */
-	public function authentication_page( $user ) {
+	public function authentication_page( $user ): void {
 		require_once ABSPATH . '/wp-admin/includes/template.php';
 		?>
 		<?php
@@ -93,5 +93,5 @@ class Two_Factor_Dummy extends Two_Factor_Provider {
 	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
 	 */
-	public function user_options( $user ) {}
+	public function user_options( $user ): void {}
 }

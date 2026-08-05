@@ -19,7 +19,7 @@ abstract class Two_Factor_Provider {
 	 *
 	 * @since 0.1-dev
 	 */
-	public static function get_instance() {
+	public static function get_instance(): self {
 		static $instances = array();
 
 		$class_name = static::class;
@@ -70,7 +70,7 @@ abstract class Two_Factor_Provider {
 	 *
 	 * @codeCoverageIgnore
 	 */
-	public function print_label() {
+	public function print_label(): void {
 		echo esc_html( $this->get_label() );
 	}
 
@@ -92,7 +92,7 @@ abstract class Two_Factor_Provider {
 	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
 	 */
-	abstract public function authentication_page( $user );
+	abstract public function authentication_page( $user ): void;
 
 	/**
 	 * Allow providers to do extra processing before the authentication.

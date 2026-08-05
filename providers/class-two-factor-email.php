@@ -247,7 +247,7 @@ class Two_Factor_Email extends Two_Factor_Provider {
 	 *
 	 * @param int $user_id User ID.
 	 */
-	public function delete_token( $user_id ) {
+	public function delete_token( $user_id ): void {
 		delete_user_meta( $user_id, self::TOKEN_META_KEY );
 	}
 
@@ -339,7 +339,7 @@ class Two_Factor_Email extends Two_Factor_Provider {
 	 *
 	 * @param WP_User|false $user WP_User object of the logged-in user.
 	 */
-	public function authentication_page( $user ) {
+	public function authentication_page( $user ): void {
 		if ( ! ( $user instanceof WP_User ) ) {
 			return;
 		}
@@ -440,7 +440,7 @@ class Two_Factor_Email extends Two_Factor_Provider {
 	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
 	 */
-	public function user_options( $user ) {
+	public function user_options( $user ): void {
 		$email = $user->user_email;
 		?>
 		<p>

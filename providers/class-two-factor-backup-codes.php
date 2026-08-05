@@ -62,7 +62,7 @@ class Two_Factor_Backup_Codes extends Two_Factor_Provider {
 	 *
 	 * @param string $hook_suffix Optional. The current admin page hook suffix.
 	 */
-	public function enqueue_assets( $hook_suffix = '' ) {
+	public function enqueue_assets( $hook_suffix = '' ): void {
 		wp_register_script(
 			'two-factor-backup-codes-admin',
 			plugins_url( 'js/backup-codes-admin.js', __FILE__ ),
@@ -79,7 +79,7 @@ class Two_Factor_Backup_Codes extends Two_Factor_Provider {
 	 *
 	 * @codeCoverageIgnore
 	 */
-	public function register_rest_routes() {
+	public function register_rest_routes(): void {
 		register_rest_route(
 			Two_Factor_Core::REST_NAMESPACE,
 			'/generate-backup-codes',
@@ -111,7 +111,7 @@ class Two_Factor_Backup_Codes extends Two_Factor_Provider {
 	 *
 	 * @codeCoverageIgnore
 	 */
-	public function admin_notices() {
+	public function admin_notices(): void {
 		$user = wp_get_current_user();
 
 		// Return if the provider is not enabled.
@@ -226,7 +226,7 @@ class Two_Factor_Backup_Codes extends Two_Factor_Provider {
 	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
 	 */
-	public function user_options( $user ) {
+	public function user_options( $user ): void {
 		wp_localize_script(
 			'two-factor-backup-codes-admin',
 			'twoFactorBackupCodes',
@@ -411,7 +411,7 @@ class Two_Factor_Backup_Codes extends Two_Factor_Provider {
 	 *
 	 * @param WP_User $user WP_User object of the logged-in user.
 	 */
-	public function authentication_page( $user ) {
+	public function authentication_page( $user ): void {
 		require_once ABSPATH . '/wp-admin/includes/template.php';
 
 		$code_length      = $this->get_backup_code_length( $user );
@@ -509,7 +509,7 @@ class Two_Factor_Backup_Codes extends Two_Factor_Provider {
 	 * @param WP_User $user WP_User object of the logged-in user.
 	 * @param string  $code_hashed The hashed the backup code.
 	 */
-	public function delete_code( $user, $code_hashed ) {
+	public function delete_code( $user, $code_hashed ): void {
 		$backup_codes = get_user_meta( $user->ID, self::BACKUP_CODES_META_KEY, true );
 
 		// Delete the current code from the list since it's been used.
